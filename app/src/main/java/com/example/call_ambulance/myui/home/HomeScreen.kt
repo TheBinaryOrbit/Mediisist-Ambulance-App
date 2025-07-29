@@ -105,6 +105,15 @@ fun HomeScreen(
     val name by viewModel.name.collectAsState()
     val isOnline by viewModel.isOnline.collectAsState()
     var isExpanded by remember { mutableStateOf(false) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                ensureLocationAndGoOnline(context, userId, viewModel)
+            }
+        }
+    )
+
 
     // Handle back button
     BackHandler { activity?.finishAffinity() }
@@ -128,21 +137,35 @@ fun HomeScreen(
                     isOnline = isOnline,
                     onToggleOnline = { newValue ->
                         if (newValue) {
-                            if (ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.ACCESS_FINE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-                            ) {
-                                // inside HomeScreen's onToggleOnline
-                                ensureLocationAndGoOnline(context, userId, viewModel)
+                            val permissionCheck = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            )
 
+                            if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                                ensureLocationAndGoOnline(context, userId, viewModel)
                             } else {
-                                Toast.makeText(context, "Location permission not granted", Toast.LENGTH_SHORT).show()
+                                val activity = context as Activity
+                                val showRationale = activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+
+                                if (showRationale) {
+                                    // 🔁 Show permission dialog again
+                                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                } else {
+                                    // ❌ User denied with “Don’t ask again” → Open settings manually
+                                    Toast.makeText(context, "Please allow location permission from settings", Toast.LENGTH_LONG).show()
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    intent.data = Uri.parse("package:" + context.packageName)
+                                    context.startActivity(intent)
+                                }
                             }
                         } else {
                             viewModel.updateStatus(false, 0.0, 0.0, userId, context)
                         }
                     }
+
+
+
 
                     ,
                     userId = userId,
@@ -475,6 +498,7 @@ fun PendingCallsList(
                 CallItemSkeleton()
             }
         } else if (calls.isEmpty()) {
+            Log.d("check",calls.toString())
             item {
                 Box(
                     modifier = Modifier
@@ -597,6 +621,17 @@ fun PendingCallItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Address Info
+            InfoRowVertical(
+                icon = Icons.Default.Home,
+                label = "Address:",
+                value = call.address ?: "N/A", // Null ya blank toh "N/A" dikha dega
+                iconColor = Color(0xFF34A853)
+            )
+
+
+            Spacer(modifier = Modifier.height(8.dp))
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -655,13 +690,14 @@ fun InfoRowVertical(
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Row {
             Text(
                 text = label,
                 color = Color(0xFF6C757D),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = value,
                 color = Color(0xFF212529),
@@ -766,7 +802,14 @@ fun AcceptedCallItem(
             )
             Spacer(modifier = Modifier.height(8.dp))
             InfoRowVertical(icon = Icons.Default.Call, label = "Phone:", value = call.phoneNumber, iconColor = Color(0xFF34A853))
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(8.dp))
+            InfoRowVertical(icon = Icons.Default.Home, label = "Address:", value = call.address, iconColor = Color(
+                0xFF0028FF
+            )
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+
 
             // 🔸 Buttons Row
             Row(

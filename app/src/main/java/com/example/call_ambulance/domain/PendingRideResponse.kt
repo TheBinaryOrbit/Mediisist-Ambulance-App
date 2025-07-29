@@ -10,6 +10,7 @@ data class PendingRideResponse(
 data class PendingRideItem(
     val id: String,
     val name: String,
+    val address: String,
     val phoneNumber: String,
     val createdAt: String
 )

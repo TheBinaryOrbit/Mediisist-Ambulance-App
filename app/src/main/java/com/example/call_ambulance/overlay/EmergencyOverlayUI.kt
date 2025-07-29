@@ -39,6 +39,7 @@ import com.example.call_ambulance.MainActivity
 fun EmergencyOverlayUI(
     name: String,
     phone: String,
+    address: String,
     notificationId: Int,
     onIgnore: () -> Unit = {},
     onAccept: () -> Unit = {}
@@ -212,6 +213,14 @@ fun EmergencyOverlayUI(
                         value = phone,
                         iconColor = Color(0xFF4CAF50)
                     )
+
+                    EmergencyInfoRow(
+                        icon = Icons.Default.Home,
+                        label = "Address",
+                        value = address,
+                        iconColor = Color(0xFF0026FF)
+                    )
+
 
                     Button(
                         onClick = {

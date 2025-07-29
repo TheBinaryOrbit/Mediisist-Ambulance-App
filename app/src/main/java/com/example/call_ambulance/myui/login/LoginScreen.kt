@@ -216,6 +216,7 @@ fun LoginScreen(navController: NavController) {
                                             navController.navigate("MainScreen/home")
                                         } else {
                                             Log.d("ErrorMessage", response.body()?.message.toString())
+                                            Log.d("ErrorMessagge", response.toString())
                                             val msg = response.body()?.error ?: "Login Failed"
                                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                         }

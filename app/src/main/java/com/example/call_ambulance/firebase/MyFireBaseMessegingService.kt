@@ -56,6 +56,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     val json = JSONObject(messageJson)
                     val name = json.getString("name")
                     val phone = json.getString("phoneNumber")
+                    val address = json.getString("address")
 
                     Log.d(TAG, "Processing call from $name ($phone)")
 
@@ -66,7 +67,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 //                    showCallNotification(name, phone)
 
                     // 3. Launch overlay activity
-                    launchOverlayActivity(name, phone)
+                    launchOverlayActivity(name, phone, address)
+                   // launchOverlayActivity(name, phone, address)
                 }
             }
         } catch (e: JSONException) {
@@ -145,7 +147,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         )
     }
 
-    private fun launchOverlayActivity(name: String, phone: String) {
+    private fun launchOverlayActivity(name: String, phone: String, address: String) {
         try {
             // Dismiss keyguard if needed
             dismissKeyguard()
@@ -154,6 +156,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             val intent = Intent(this, OverlayActivity::class.java).apply {
                 putExtra("name", name)
                 putExtra("phoneNumber", phone)
+                putExtra("Address", address)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TASK or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP

@@ -28,10 +28,6 @@ interface ApiService {
         @Body body: StatusUpdateRequest
     ): Call<Void>
 
-
-
-
-
     // 👤 Get customer support profile by ID
     @GET("api/v1/ambulancepartner/getambulancepartner/{id}")
     fun getAmbulancePartnerById(@Path("id") id: String): Call<AmbulancePartnerResponse>

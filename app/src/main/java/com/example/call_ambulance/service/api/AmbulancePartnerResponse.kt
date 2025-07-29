@@ -10,5 +10,7 @@ data class partner(
     val name: String,
     val phoneNumber: String,
     val email: String,
+    val imageUrl: String,
+    val vehicleNumber: String,
     val isOnline: Boolean
 )

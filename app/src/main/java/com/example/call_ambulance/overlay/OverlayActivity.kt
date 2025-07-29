@@ -26,6 +26,7 @@ class OverlayActivity : ComponentActivity() {
 
         val name = intent.getStringExtra("name") ?: "Unknown"
         val phone = intent.getStringExtra("phoneNumber") ?: "N/A"
+        val address = intent.getStringExtra("address") ?: "N/A"
 
         setContent {
             CallSupportTheme {
@@ -39,6 +40,7 @@ class OverlayActivity : ComponentActivity() {
                         EmergencyOverlayUI(
                             name = name,
                             phone = phone,
+                            address = address,
                             notificationId = notificationId,
                             onIgnore = { finish() },
                             onAccept = { finish() }

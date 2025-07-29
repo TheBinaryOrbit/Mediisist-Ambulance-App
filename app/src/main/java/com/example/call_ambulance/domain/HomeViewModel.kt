@@ -1,17 +1,34 @@
 package com.example.call_ambulance.domain
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.call_ambulance.foregroundservice.ForegroundLocationService
+import com.example.call_ambulance.service.SocketHandler
+import com.example.call_ambulance.service.SocketHandler.emitLiveLocation
 import com.example.call_ambulance.service.api.ApiClient
 import com.example.call_ambulance.service.api.AmbulancePartnerResponse
+import com.example.call_ambulance.service.preference.AppPreferences
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -102,13 +119,14 @@ class HomeViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     val body = response.body()
                     val rideList = body?.ride ?: emptyList()
+                    Log.d("Active", response.toString())
 
                     val list = rideList.map { ride ->
                         EmergencyCall(
                             id = ride.id,
                             patientName = ride.name,
                             phoneNumber = ride.phoneNumber,
-                            address = "",
+                            address = ride.address,
                             lat = "",
                             lng = "",
                             status = "pending",
@@ -133,13 +151,13 @@ class HomeViewModel : ViewModel() {
                 val response = ApiClient.apiService.getRidesByAmbulancePartner(userId, status = "active")
                 if (response.isSuccessful) {
                     val rideList = response.body()?.ride ?: emptyList()
-
+                 //   Log.d("Active", response.toString())
                     val acceptedCallList = rideList.map { ride ->
                         EmergencyCall(
                             id = ride.id,
                             patientName = ride.name,
                             phoneNumber = ride.phoneNumber,
-                            address = "",
+                            address = ride.address,
                             lat = ride.lat,
                             lng = ride.lng,
                             status = "accepted",
@@ -270,17 +288,47 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val requestBody = mapOf("ambulancePartnerId" to userId)
-                Log.d("AcceptCall", "rideId: $callId")
-                Log.d("AcceptCall", "requestBody: $requestBody")
                 val response = ApiClient.apiService.AcceptRidebyAmbulnacePartner(callId, requestBody)
 
                 if (response.isSuccessful) {
-                    fetchPendingRides(context)
-                    fetchActiveRides(userId, context)
-                    Toast.makeText(context, "Call accepted", Toast.LENGTH_SHORT).show()
+                    val responseBody = response.body()
+                    var sessionKeyFromResponse: String? = null
+
+                    if (responseBody is Map<*, *>) {
+                        sessionKeyFromResponse = responseBody["sessionKey"] as? String
+                    }
+
+                    if (!sessionKeyFromResponse.isNullOrEmpty()) {
+                        // ✅ Save only response-wala session key
+                        AppPreferences.saveSessionKey(context, sessionKeyFromResponse)
+
+                        // ✅ Connect socket AFTER saving session
+                        SocketHandler.connectSocket()
+                        SocketHandler.startLocationUpdates(context, userId, sessionKeyFromResponse)
+
+
+                        // ✅ Fetch updated lists
+                        fetchPendingRides(context)
+                        fetchActiveRides(userId, context)
+
+                        Toast.makeText(context, "Call accepted", Toast.LENGTH_SHORT).show()
+
+                        // ✅ Start foreground service
+                        val intent = Intent(context, ForegroundLocationService::class.java)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+
+                    } else {
+                        Toast.makeText(context, "Session key missing in response", Toast.LENGTH_SHORT).show()
+                    }
+
                 } else {
                     Toast.makeText(context, "Failed to accept call", Toast.LENGTH_SHORT).show()
                 }
+
             } catch (e: Exception) {
                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
@@ -289,10 +337,16 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+
+
+
+
+
     fun completeCall(callId: String, context: Context) {
         _isLoading.value = true
-        val userId = context.getSharedPreferences("UserSession", Context.MODE_PRIVATE)
-            .getString("userId", null) ?: return
+
+        val sharedPrefs = context.getSharedPreferences("UserSession", Context.MODE_PRIVATE)
+        val userId = sharedPrefs.getString("userId", null) ?: return
 
         viewModelScope.launch {
             try {
@@ -302,8 +356,16 @@ class HomeViewModel : ViewModel() {
                 val response = ApiClient.apiService.CompletedByAmbulancePartner(callId, requestBody)
 
                 if (response.isSuccessful) {
+                    // ✅ Clear session key
+                    sharedPrefs.edit().remove("sessionKey").apply()
+
+                    // ✅ Disconnect socket
+                    SocketHandler.closeSocket()
+
+                    // ✅ Refresh ride data
                     fetchPendingRides(context)
                     fetchActiveRides(userId, context)
+
                     Toast.makeText(context, "Ride Completed", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "Failed to Completed Ride Call", Toast.LENGTH_SHORT).show()
@@ -315,9 +377,8 @@ class HomeViewModel : ViewModel() {
             }
         }
     }
+
 }
-
-
 
 
 data class EmergencyCall(

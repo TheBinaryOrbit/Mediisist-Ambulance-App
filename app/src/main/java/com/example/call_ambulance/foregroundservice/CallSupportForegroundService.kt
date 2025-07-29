@@ -53,8 +53,8 @@ class CallSupportForegroundService : Service() {
         createNotificationChannel()
 
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Call Support Active")
-            .setContentText("Listening for support notifications")
+            .setContentTitle("Call Ambulance Active")
+            .setContentText("Listening for notifications")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()

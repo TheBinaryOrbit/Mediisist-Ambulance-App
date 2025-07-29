@@ -24,6 +24,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
 
 
 
@@ -49,6 +51,12 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".foregroundservice.ForegroundLocationService"
+            android:foregroundServiceType="location"
+            tools:ignore="MissingClass" />
+
 
         <!-- Foreground Service -->
         <service

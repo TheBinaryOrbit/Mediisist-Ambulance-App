@@ -1,3 +1,4 @@
+import org.gradle.internal.impldep.org.junit.experimental.categories.Categories.CategoryFilter.exclude
 import org.gradle.kotlin.dsl.implementation
 
 plugins {
@@ -124,6 +125,16 @@ dependencies {
 
     //Location
     implementation ("com.google.android.gms:play-services-location:21.0.1")
+
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    implementation ("io.socket:socket.io-client:2.0.0") {
+        exclude(group = "org.json", module = "json")
+    }
+
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+
+    implementation ("androidx.core:core:1.12.0")
 
 
 }
